@@ -11,7 +11,7 @@ namespace SHNK_Booster
     public partial class MainWindow : Window
     {
         // حدد رقم الإصدار الحالي للبرنامج
-        private readonly string currentVersion = "1.0.1";
+        private readonly string currentVersion = "1.0.0";
 
         // روابط جيتهاب (سنقوم بتعديل USERNAME و REPO باسم حسابك ومستودعك)
         private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/SHNK-Booster/main/version.txt";
