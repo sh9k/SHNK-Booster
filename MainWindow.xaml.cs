@@ -11,10 +11,10 @@ namespace SHNK_Booster
     public partial class MainWindow : Window
     {
         // حدد رقم الإصدار الحالي للبرنامج
-        private readonly string currentVersion = "1.0.0";
+        private readonly string currentVersion = "1.0.1";
 
         // روابط جيتهاب (سنقوم بتعديل USERNAME و REPO باسم حسابك ومستودعك)
-        private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/REPO/main/version.txt";
+        private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/SHNK-Booster/main/version.txt";
         private readonly string downloadUrl = "https://github.com/sh9k/SHNK-Booster\r\n/releases/latest/download/SHNK_BOOSTER.exe";
 
         // 1. دالة البحث عن تحديثات (تعمل في الخلفية)
@@ -22,36 +22,37 @@ namespace SHNK_Booster
         {
             try
             {
+                // 🛡️ السطر الجديد يوضع هنا: في البداية تماماً لفتح بوابات الأمان 🛡️
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls13;
+
                 using (HttpClient client = new HttpClient())
                 {
-                    // منع تخزين النتيجة في الكاش (لضمان قراءة التحديث فوراً)
-                    client.DefaultRequestHeaders.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    // إضافة هوية للبرنامج لكي لا يحظره موقع جيتهاب
+                    client.DefaultRequestHeaders.Add("User-Agent", "SHNK-Booster-App");
 
-                    string onlineVersion = await client.GetStringAsync(versionUrl);
-                    onlineVersion = onlineVersion.Trim(); // إزالة أي مسافات زائدة
+                    // جلب النسخة من الإنترنت متجاوزين الـ Cache
+                    string onlineVersion = (await client.GetStringAsync(versionUrl + "?t=" + DateTime.Now.Ticks)).Trim();
+
+                    // رسالة للتأكد من الأرقام
+                    MessageBox.Show($"فحص التحديث:\nنسخة جهازك: {currentVersion}\nنسخة السيرفر: {onlineVersion}");
 
                     if (onlineVersion != currentVersion)
                     {
-                        MessageBoxResult result = MessageBox.Show(
-                            $"تحديث جديد متوفر! (الإصدار {onlineVersion})\nهل تريد التحديث الآن؟",
-                            "SHNK BOOSTER UPDATE",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Information);
-
+                        var result = MessageBox.Show($"يوجد تحديث جديد (v{onlineVersion})! هل تريد تحميله الآن؟", "تحديث متوفر", MessageBoxButton.YesNo);
                         if (result == MessageBoxResult.Yes)
                         {
-                            StatusText.Text = "DOWNLOADING UPDATE... ⏳";
-                            await DownloadAndApplyUpdate();
+                            Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true });
                         }
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // فشل الاتصال بالإنترنت أو الرابط خاطئ، نتجاهل الأمر بصمت حتى لا نزعج المستخدم
+                // رسالة الخطأ التفصيلية لمعرفة سبب المشكلة إن وجدت
+                MessageBox.Show("سبب الفشل الدقيق هو: " + ex.Message + "\n\n" + ex.InnerException?.Message);
             }
         }
-        
+
         // 2. دالة تحميل وتثبيت التحديث السحرية
         private async Task DownloadAndApplyUpdate()
         {
