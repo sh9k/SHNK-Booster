@@ -1,65 +1,78 @@
-﻿using System;
-using System.Diagnostics;
+using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using System.Net.Http;
-using System.IO;
 using System.Threading.Tasks;
+using System.IO;
+using System.Diagnostics;
+
 namespace SHNK_Booster
 {
+    // هنا تم إرجاع تعريف الكلاس المفقود
     public partial class MainWindow : Window
     {
-        // حدد رقم الإصدار الحالي للبرنامج
-        private readonly string currentVersion = "1.0.0";
-
-        // روابط جيتهاب (سنقوم بتعديل USERNAME و REPO باسم حسابك ومستودعك)
+        // 🔗 متغيرات التحديث (تأكد من رقم النسخة هنا)
+        private readonly string currentVersion = "1.0.3";
         private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/SHNK-Booster/main/version.txt";
-        private readonly string downloadUrl = "https://github.com/sh9k/SHNK-Booster\r\n/releases/latest/download/SHNK_BOOSTER.exe";
+        private readonly string downloadUrl = "https://github.com/sh9k/SHNK-Booster/releases/latest/download/SHNK-BOOSTER.exe";
 
-        // 1. دالة البحث عن تحديثات (تعمل في الخلفية)
+        private DispatcherTimer timer;
+        private ulong lastIdleTime;
+        private ulong lastSystemTime;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            // تنظيف مخلفات التحديث السابق والتحقق من الجديد
+            CleanupOldUpdates();
+            CheckForUpdates();
+
+            timer = new DispatcherTimer();
+            timer.Interval = TimeSpan.FromSeconds(1);
+            timer.Tick += Timer_Tick;
+            timer.Start();
+        }
+
         private async void CheckForUpdates()
         {
             try
             {
-                // 🛡️ السطر الجديد يوضع هنا: في البداية تماماً لفتح بوابات الأمان 🛡️
                 System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 | System.Net.SecurityProtocolType.Tls13;
 
                 using (HttpClient client = new HttpClient())
                 {
-                    // إضافة هوية للبرنامج لكي لا يحظره موقع جيتهاب
                     client.DefaultRequestHeaders.Add("User-Agent", "SHNK-Booster-App");
-
-                    // جلب النسخة من الإنترنت متجاوزين الـ Cache
                     string onlineVersion = (await client.GetStringAsync(versionUrl + "?t=" + DateTime.Now.Ticks)).Trim();
-
-                    // رسالة للتأكد من الأرقام
-                    MessageBox.Show($"فحص التحديث:\nنسخة جهازك: {currentVersion}\nنسخة السيرفر: {onlineVersion}");
 
                     if (onlineVersion != currentVersion)
                     {
-                        var result = MessageBox.Show($"يوجد تحديث جديد (v{onlineVersion})! هل تريد تحميله الآن؟", "تحديث متوفر", MessageBoxButton.YesNo);
+                        var result = MessageBox.Show($"يوجد تحديث جديد (v{onlineVersion})! هل تريد تحميله وتثبيته الآن؟", "تحديث متوفر", MessageBoxButton.YesNo, MessageBoxImage.Information);
                         if (result == MessageBoxResult.Yes)
                         {
-                            Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true });
+                            await DownloadAndApplyUpdate();
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                // رسالة الخطأ التفصيلية لمعرفة سبب المشكلة إن وجدت
-                MessageBox.Show("سبب الفشل الدقيق هو: " + ex.Message + "\n\n" + ex.InnerException?.Message);
+                // إخفاء رسالة الخطأ إذا لم يكن هناك إنترنت
             }
         }
 
-        // 2. دالة تحميل وتثبيت التحديث السحرية
+        // 🚀 الدالة السحرية للتحديث الصامت بالخلفية
         private async Task DownloadAndApplyUpdate()
         {
             try
             {
+                MessageBox.Show("جاري تحميل التحديث في الخلفية... سيتم إعادة تشغيل البرنامج تلقائياً عند الانتهاء.", "تحديث", MessageBoxButton.OK, MessageBoxImage.Information);
+                StatusText.Text = "DOWNLOADING UPDATE... ⏳";
+
                 using (HttpClient client = new HttpClient())
                 {
+                    client.DefaultRequestHeaders.Add("User-Agent", "SHNK-Booster-App");
                     byte[] fileBytes = await client.GetByteArrayAsync(downloadUrl);
 
                     string currentExe = Process.GetCurrentProcess().MainModule.FileName;
@@ -73,7 +86,7 @@ namespace SHNK_Booster
                     File.WriteAllBytes(currentExe, fileBytes);
 
                     StatusText.Text = "UPDATE COMPLETE ✅ RESTARTING...";
-                    await Task.Delay(1000);
+                    await Task.Delay(1000); // انتظار ثانية ليرى المستخدم الرسالة
 
                     // تشغيل النسخة الجديدة وإغلاق القديمة
                     Process.Start(currentExe);
@@ -82,15 +95,28 @@ namespace SHNK_Booster
             }
             catch (Exception ex)
             {
-                MessageBox.Show("فشل التحديث: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("فشل التحديث: " + ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
                 StatusText.Text = "UPDATE FAILED ❌";
             }
         }
+
+        // 🧹 دالة تنظيف الملف القديم بعد التحديث
+        private void CleanupOldUpdates()
+        {
+            try
+            {
+                string backupExe = Process.GetCurrentProcess().MainModule.FileName + ".old";
+                if (File.Exists(backupExe))
+                {
+                    File.Delete(backupExe);
+                }
+            }
+            catch { }
+        }
+
         // ==========================================
         // 🛠️ دوال التحكم بالنافذة (Title Bar)
         // ==========================================
-
-        // 1. دالة سحب النافذة وتحريكها
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
@@ -99,35 +125,19 @@ namespace SHNK_Booster
             }
         }
 
-        // 2. دالة تصغير النافذة (Minimize)
         private void MinimizeBtn_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
         }
 
-        // 3. دالة إغلاق البرنامج (Close)
         private void CloseBtn_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
         }
-        // 3. دالة تنظيف الملفات القديمة
-        private void CleanupOldUpdates()
-        {
-            try
-            {
-                string backupExe = Process.GetCurrentProcess().MainModule.FileName + ".old";
-                if (File.Exists(backupExe))
-                {
-                    File.Delete(backupExe); // حذف النسخة القديمة بعد التحديث بنجاح
-                }
-            }
-            catch { }
-        }
+
         // ==========================================
         // 🛠️ استدعاءات النواة (WinAPI Low-Level)
         // ==========================================
-
-        // 1. مراقبة الرام
         [StructLayout(LayoutKind.Sequential)]
         public struct MEMORYSTATUSEX
         {
@@ -146,11 +156,9 @@ namespace SHNK_Booster
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 
-        // 2. تنظيف الذاكرة (RAM Trimming)
         [DllImport("psapi.dll")]
         static extern int EmptyWorkingSet(IntPtr hwProc);
 
-        // 3. مراقبة المعالج (بديل الـ PerformanceCounter البطيء)
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
@@ -162,27 +170,10 @@ namespace SHNK_Booster
         }
 
         // ==========================================
-
-        private DispatcherTimer timer;
-        private ulong lastIdleTime;
-        private ulong lastSystemTime;
-
-        public MainWindow()
-        {
-            InitializeComponent();
-
-            // تشغيل نظام التحديث الذاتي فور فتح البرنامج
-            CleanupOldUpdates();
-            CheckForUpdates();
-
-            timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromSeconds(1);
-            timer.Tick += Timer_Tick;
-            timer.Start();
-        }
+        // 📊 قراءة ومراقبة الموارد
+        // ==========================================
         private void Timer_Tick(object sender, EventArgs e)
         {
-            // 📊 قراءة الرام الفورية
             MEMORYSTATUSEX memStatus = new MEMORYSTATUSEX();
             memStatus.dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX));
             if (GlobalMemoryStatusEx(ref memStatus))
@@ -190,7 +181,6 @@ namespace SHNK_Booster
                 RamText.Text = $"RAM: {memStatus.dwMemoryLoad}%";
             }
 
-            // 📊 قراءة المعالج الفورية (بدون تجميد الواجهة)
             if (GetSystemTimes(out FILETIME idleTime, out FILETIME kernelTime, out FILETIME userTime))
             {
                 ulong currentIdleTime = ((ulong)idleTime.dwHighDateTime << 32) | idleTime.dwLowDateTime;
@@ -216,6 +206,9 @@ namespace SHNK_Booster
             }
         }
 
+        // ==========================================
+        // 🚀 أزرار الأداء
+        // ==========================================
         private void BoostBtn_Click(object sender, RoutedEventArgs e)
         {
             ApplyBoost(false);
@@ -250,17 +243,10 @@ namespace SHNK_Booster
 
             foreach (var p in processes)
             {
-                try
-                {
-                    p.PriorityClass = ProcessPriorityClass.High;
-                }
-                catch { }
+                try { p.PriorityClass = ProcessPriorityClass.High; } catch { }
             }
 
-            if (isTurbo)
-            {
-                TrimHeavyApps();
-            }
+            if (isTurbo) TrimHeavyApps();
         }
 
         void UltraMode()
@@ -277,33 +263,23 @@ namespace SHNK_Booster
 
             foreach (var p in processes)
             {
-                try
-                {
-                    p.PriorityClass = ProcessPriorityClass.RealTime; // أعلى أولوية ممكنة
-                }
-                catch { }
+                try { p.PriorityClass = ProcessPriorityClass.RealTime; } catch { }
             }
 
             TrimHeavyApps();
 
-            // تنظيف جذري لرام النظام بالكامل
             try { EmptyWorkingSet((IntPtr)(-1)); } catch { }
         }
 
         void TrimHeavyApps()
         {
-            // تقليص استهلاك الرام لهذه البرامج إلى 1 ميجابايت بدون إغلاقها
             string[] heavyApps = { "chrome", "msedge", "discord", "steam" };
 
             foreach (var app in heavyApps)
             {
                 foreach (var p in Process.GetProcessesByName(app))
                 {
-                    try
-                    {
-                        EmptyWorkingSet(p.Handle);
-                    }
-                    catch { }
+                    try { EmptyWorkingSet(p.Handle); } catch { }
                 }
             }
         }
@@ -314,11 +290,7 @@ namespace SHNK_Booster
 
             foreach (var p in processes)
             {
-                try
-                {
-                    p.PriorityClass = ProcessPriorityClass.Normal;
-                }
-                catch { }
+                try { p.PriorityClass = ProcessPriorityClass.Normal; } catch { }
             }
 
             StatusText.Text = "SYSTEM RESTORED ✅";
