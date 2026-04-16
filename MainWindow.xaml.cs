@@ -9,17 +9,44 @@ using System.Diagnostics;
 
 namespace SHNK_Booster
 {
-    // هنا تم إرجاع تعريف الكلاس المفقود
     public partial class MainWindow : Window
     {
-        // 🔗 متغيرات التحديث (تأكد من رقم النسخة هنا)
-        private readonly string currentVersion = "1.0.3";
+        // 🔗 متغيرات التحديث
+        private readonly string currentVersion = "1.0.4";
         private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/SHNK-Booster/main/version.txt";
         private readonly string downloadUrl = "https://github.com/sh9k/SHNK-Booster/releases/latest/download/SHNK-BOOSTER.exe";
 
         private DispatcherTimer timer;
         private ulong lastIdleTime;
         private ulong lastSystemTime;
+
+        // ==========================================
+        // 🛡️ متغيرات ودوال التيربو الفخمة (الجديدة)
+        // ==========================================
+        private bool isTurboActive = false;
+        
+        // قائمة بالخدمات الثقيلة التي سنوقفها للعب (التحديثات، النقل الذكي، البحث، الفهرسة، الطباعة)
+        private readonly string[] heavyWindowsServices = { "wuauserv", "BITS", "WSearch", "SysMain", "Spooler" };
+
+        // 🥷 دالة احترافية لتنفيذ أوامر الويندوز العميقة بصمت تام (بدون شاشة CMD)
+        private void ExecuteHiddenCommand(string command)
+        {
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", $"/c {command}")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                using (Process p = Process.Start(psi))
+                {
+                    p?.WaitForExit(4000); // ننتظر 4 ثوانٍ كحد أقصى
+                }
+            }
+            catch { }
+        }
+        // ==========================================
 
         public MainWindow()
         {
@@ -209,14 +236,94 @@ namespace SHNK_Booster
         // ==========================================
         // 🚀 أزرار الأداء
         // ==========================================
-        private void BoostBtn_Click(object sender, RoutedEventArgs e)
+        private async void BoostBtn_Click(object sender, RoutedEventArgs e)
         {
-            ApplyBoost(false);
+            try
+            {
+                StatusText.Text = "CLEANING SYSTEM... ⏳";
+
+                int deletedFilesCount = await Task.Run(() =>
+                {
+                    int count = 0;
+                    string[] foldersToClean = {
+                        Path.GetTempPath(),
+                        @"C:\Windows\Temp",
+                        @"C:\Windows\Prefetch"
+                    };
+
+                    foreach (string folder in foldersToClean)
+                    {
+                        if (Directory.Exists(folder))
+                        {
+                            try
+                            {
+                                string[] files = Directory.GetFiles(folder);
+                                foreach (string file in files)
+                                {
+                                    try
+                                    {
+                                        File.Delete(file);
+                                        count++;
+                                    }
+                                    catch { }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                    return count;
+                });
+
+                try { EmptyWorkingSet((IntPtr)(-1)); } catch { }
+
+                ApplyBoost(false);
+
+                MessageBox.Show($"تم تنظيف النظام وتفريغ الرام بنجاح! 🚀\nتم مسح {deletedFilesCount} ملف غير ضروري.", "SHNK BOOSTER", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "BOOST FAILED ❌";
+                MessageBox.Show("حدث خطأ: " + ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void TurboBtn_Click(object sender, RoutedEventArgs e)
+        private async void TurboBtn_Click(object sender, RoutedEventArgs e)
         {
-            ApplyBoost(true);
+            try
+            {
+                // 1. التحقق من وجود المحاكي أولاً قبل إيقاف الخدمات
+                var processes = Process.GetProcessesByName("AndroidEmulatorEx");
+                if (processes.Length == 0)
+                {
+                    StatusText.Text = "OPEN GAMELOOP FIRST ⚠️";
+                    return;
+                }
+
+                StatusText.Text = "ACTIVATING TURBO... 🔥";
+                
+                // 2. تصفير ذاكرة الإنترنت لتقليل البنج (Ping)
+                await Task.Run(() => ExecuteHiddenCommand("ipconfig /flushdns"));
+
+                // 3. إيقاف خدمات الويندوز الثقيلة بالخلفية
+                await Task.Run(() =>
+                {
+                    foreach (string service in heavyWindowsServices)
+                    {
+                        ExecuteHiddenCommand($"net stop \"{service}\" /y");
+                    }
+                });
+
+                // 4. تطبيق الأولوية وقص برامج الخلفية
+                ApplyBoost(true);
+                isTurboActive = true;
+
+                MessageBox.Show("تم تفعيل وضع التيربو الاحترافي! 🚀\n- تم إيقاف التحديثات والفهرسة.\n- تم تحسين شبكة الإنترنت.\n- تم توجيه كل الموارد للمحاكي.", "SHNK TURBO", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "TURBO FAILED ❌";
+                MessageBox.Show("حدث خطأ: " + ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void UltraBtn_Click(object sender, RoutedEventArgs e)
@@ -224,9 +331,35 @@ namespace SHNK_Booster
             UltraMode();
         }
 
-        private void RestoreBtn_Click(object sender, RoutedEventArgs e)
+        private async void RestoreBtn_Click(object sender, RoutedEventArgs e)
         {
-            Restore();
+            try
+            {
+                StatusText.Text = "RESTORING SYSTEM... ♻️";
+
+                // 1. إعادة تشغيل خدمات الويندوز إذا كان وضع التيربو مفعلاً
+                if (isTurboActive)
+                {
+                    await Task.Run(() =>
+                    {
+                        foreach (string service in heavyWindowsServices)
+                        {
+                            ExecuteHiddenCommand($"net start \"{service}\" /y");
+                        }
+                    });
+                    isTurboActive = false;
+                }
+
+                // 2. إرجاع أولويات المحاكي لوضعها الطبيعي
+                Restore();
+
+                MessageBox.Show("تمت استعادة النظام بنجاح! ✅\nعادت جميع خدمات الويندوز والشبكة للعمل بشكل طبيعي وآمن.", "SHNK RESTORE", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "RESTORE FAILED ❌";
+                MessageBox.Show("حدث خطأ: " + ex.Message, "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         void ApplyBoost(bool isTurbo)
