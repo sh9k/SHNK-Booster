@@ -57,6 +57,32 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style TargetType="Button" x:Key="IconBtnStyle">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="1.0"/>
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="White" BlurRadius="15" ShadowDepth="0"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border BorderBrush="#22c55e" BorderThickness="1" CornerRadius="8" Margin="10" Background="#0D0D11">
@@ -73,7 +99,7 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Text="SHNK BOOSTER v1.3" Foreground="#555" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <TextBlock Text="SHNK BOOSTER v1.5" Foreground="#555" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" Margin="10,0,0,0"/>
 
                 <Button Grid.Column="1" Name="MinimizeBtn" Content="—" Click="MinimizeBtn_Click" Style="{StaticResource TitleBarBtnStyle}" Foreground="#00E5FF"/>
                 <Button Grid.Column="2" Name="CloseBtn" Content="✕" Click="CloseBtn_Click" Foreground="#FF003C">
@@ -92,11 +118,21 @@
 
             <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Width="260">
 
-                <TextBlock Text="SHNK BOOSTER" Foreground="#00FF9D" FontSize="28" FontWeight="Black" HorizontalAlignment="Center" Margin="0,0,0,20">
+                <TextBlock Text="SHNK BOOSTER" Foreground="#00FF9D" FontSize="28" FontWeight="Black" HorizontalAlignment="Center" Margin="0,0,0,10">
                     <TextBlock.Effect>
                         <DropShadowEffect Color="#00FF9D" BlurRadius="15" ShadowDepth="0"/>
                     </TextBlock.Effect>
                 </TextBlock>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                    <Button Name="BtnGameLoop" Click="BtnGameLoop_Click" Style="{StaticResource IconBtnStyle}" Margin="0,0,15,0" Width="45" Height="45" ToolTip="تفعيل وضع GameLoop">
+                        <Image Source="/Assets/gameloop.png" Stretch="Uniform"/>
+                    </Button>
+
+                    <Button Name="BtnLDPlayer" Click="BtnLDPlayer_Click" Style="{StaticResource IconBtnStyle}" Margin="15,0,0,0" Width="45" Height="45" ToolTip="تفعيل وضع LDPlayer">
+                        <Image Source="/Assets/ldplayer.png" Stretch="Uniform"/>
+                    </Button>
+                </StackPanel>
 
                 <Button Name="BoostBtn" Content="BOOST" Click="BoostBtn_Click" Style="{StaticResource MainBtnStyle}"/>
 
