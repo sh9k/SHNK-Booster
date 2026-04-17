@@ -6,13 +6,14 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
+using System.Windows.Media; // تم إضافة هذه المكتبة للتحكم بتغيير الألوان
 
 namespace SHNK_Booster
 {
     public partial class MainWindow : Window
     {
         // 🔗 متغيرات التحديث
-        private readonly string currentVersion = "1.0.4";
+        private readonly string currentVersion = "1.0.5";
         private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/SHNK-Booster/main/version.txt";
         private readonly string downloadUrl = "https://github.com/sh9k/SHNK-Booster/releases/latest/download/SHNK-BOOSTER.exe";
 
@@ -21,10 +22,16 @@ namespace SHNK_Booster
         private ulong lastSystemTime;
 
         // ==========================================
+        // 🎮 متغيرات وضع المحاكي (الافتراضي جيم لوب)
+        // ==========================================
+        private string targetProcessName = "AndroidEmulatorEx"; // اسم العملية في النظام
+        private string emulatorDisplayName = "GAMELOOP";        // الاسم المعروض للمستخدم
+
+        // ==========================================
         // 🛡️ متغيرات ودوال التيربو الفخمة (الجديدة)
         // ==========================================
         private bool isTurboActive = false;
-        
+
         // قائمة بالخدمات الثقيلة التي سنوقفها للعب (التحديثات، النقل الذكي، البحث، الفهرسة، الطباعة)
         private readonly string[] heavyWindowsServices = { "wuauserv", "BITS", "WSearch", "SysMain", "Spooler" };
 
@@ -139,6 +146,33 @@ namespace SHNK_Booster
                 }
             }
             catch { }
+        }
+
+        // ==========================================
+        // 🔄 أزرار التبديل بين المحاكيات (جيم لوب / LDPlayer)
+        // ==========================================
+        private void BtnGameLoop_Click(object sender, RoutedEventArgs e)
+        {
+            targetProcessName = "AndroidEmulatorEx";
+            emulatorDisplayName = "GAMELOOP";
+
+            // تغيير الواجهة للون الأصلي (غامق) وإرجاع لون النص أزرق سماوي
+            this.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E1E1E"));
+            StatusText.Foreground = Brushes.Cyan;
+
+            StatusText.Text = "GAMELOOP MODE SELECTED 🔵";
+        }
+
+        private void BtnLDPlayer_Click(object sender, RoutedEventArgs e)
+        {
+            targetProcessName = "dnplayer";
+            emulatorDisplayName = "LDPLAYER";
+
+            // تغيير الواجهة للون مختلف (مثلاً رمادي أفتح) ولون النص برتقالي لتمييز LDPlayer
+            this.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2C2C2C"));
+            StatusText.Foreground = Brushes.Orange;
+
+            StatusText.Text = "LDPLAYER MODE SELECTED 🟡";
         }
 
         // ==========================================
@@ -291,16 +325,16 @@ namespace SHNK_Booster
         {
             try
             {
-                // 1. التحقق من وجود المحاكي أولاً قبل إيقاف الخدمات
-                var processes = Process.GetProcessesByName("AndroidEmulatorEx");
+                // 1. التحقق من وجود المحاكي (الديناميكي) أولاً قبل إيقاف الخدمات
+                var processes = Process.GetProcessesByName(targetProcessName);
                 if (processes.Length == 0)
                 {
-                    StatusText.Text = "OPEN GAMELOOP FIRST ⚠️";
+                    StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
                     return;
                 }
 
                 StatusText.Text = "ACTIVATING TURBO... 🔥";
-                
+
                 // 2. تصفير ذاكرة الإنترنت لتقليل البنج (Ping)
                 await Task.Run(() => ExecuteHiddenCommand("ipconfig /flushdns"));
 
@@ -364,11 +398,11 @@ namespace SHNK_Booster
 
         void ApplyBoost(bool isTurbo)
         {
-            var processes = Process.GetProcessesByName("AndroidEmulatorEx");
+            var processes = Process.GetProcessesByName(targetProcessName);
 
             if (processes.Length == 0)
             {
-                StatusText.Text = "OPEN GAMELOOP FIRST ⚠️";
+                StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
                 return;
             }
 
@@ -384,11 +418,11 @@ namespace SHNK_Booster
 
         void UltraMode()
         {
-            var processes = Process.GetProcessesByName("AndroidEmulatorEx");
+            var processes = Process.GetProcessesByName(targetProcessName);
 
             if (processes.Length == 0)
             {
-                StatusText.Text = "OPEN GAMELOOP FIRST ⚠️";
+                StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
                 return;
             }
 
@@ -419,7 +453,7 @@ namespace SHNK_Booster
 
         void Restore()
         {
-            var processes = Process.GetProcessesByName("AndroidEmulatorEx");
+            var processes = Process.GetProcessesByName(targetProcessName);
 
             foreach (var p in processes)
             {
