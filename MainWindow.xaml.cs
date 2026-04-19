@@ -6,14 +6,14 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
-using System.Windows.Media; // تم إضافة هذه المكتبة للتحكم بتغيير الألوان
+using System.Windows.Media;
 
 namespace SHNK_Booster
 {
     public partial class MainWindow : Window
     {
         // 🔗 متغيرات التحديث
-        private readonly string currentVersion = "1.0.5";
+        private readonly string currentVersion = "1.0.6";
         private readonly string versionUrl = "https://raw.githubusercontent.com/sh9k/SHNK-Booster/main/version.txt";
         private readonly string downloadUrl = "https://github.com/sh9k/SHNK-Booster/releases/latest/download/SHNK-BOOSTER.exe";
 
@@ -22,20 +22,21 @@ namespace SHNK_Booster
         private ulong lastSystemTime;
 
         // ==========================================
-        // 🎮 متغيرات وضع المحاكي (الافتراضي جيم لوب)
+        // 🎮 متغيرات وضع المحاكي (الاحترافية)
         // ==========================================
-        private string targetProcessName = "AndroidEmulatorEx"; // اسم العملية في النظام
-        private string emulatorDisplayName = "GAMELOOP";        // الاسم المعروض للمستخدم
+        // الوضع الافتراضي عند التشغيل هو GameLoop بجميع محركاته المحتملة
+        private string[] targetProcesses = { "AndroidEmulatorEx", "AndroidEmulator", "aow_exe" };
+        private string emulatorDisplayName = "GAMELOOP";
 
         // ==========================================
-        // 🛡️ متغيرات ودوال التيربو الفخمة (الجديدة)
+        // 🛡️ متغيرات ودوال التيربو الفخمة
         // ==========================================
         private bool isTurboActive = false;
 
-        // قائمة بالخدمات الثقيلة التي سنوقفها للعب (التحديثات، النقل الذكي، البحث، الفهرسة، الطباعة)
+        // قائمة بالخدمات الثقيلة التي سنوقفها للعب
         private readonly string[] heavyWindowsServices = { "wuauserv", "BITS", "WSearch", "SysMain", "Spooler" };
 
-        // 🥷 دالة احترافية لتنفيذ أوامر الويندوز العميقة بصمت تام (بدون شاشة CMD)
+        // 🥷 دالة لتنفيذ أوامر الويندوز العميقة بصمت
         private void ExecuteHiddenCommand(string command)
         {
             try
@@ -48,7 +49,7 @@ namespace SHNK_Booster
                 };
                 using (Process p = Process.Start(psi))
                 {
-                    p?.WaitForExit(4000); // ننتظر 4 ثوانٍ كحد أقصى
+                    p?.WaitForExit(4000);
                 }
             }
             catch { }
@@ -59,7 +60,6 @@ namespace SHNK_Booster
         {
             InitializeComponent();
 
-            // تنظيف مخلفات التحديث السابق والتحقق من الجديد
             CleanupOldUpdates();
             CheckForUpdates();
 
@@ -90,13 +90,9 @@ namespace SHNK_Booster
                     }
                 }
             }
-            catch (Exception)
-            {
-                // إخفاء رسالة الخطأ إذا لم يكن هناك إنترنت
-            }
+            catch (Exception) { }
         }
 
-        // 🚀 الدالة السحرية للتحديث الصامت بالخلفية
         private async Task DownloadAndApplyUpdate()
         {
             try
@@ -112,17 +108,14 @@ namespace SHNK_Booster
                     string currentExe = Process.GetCurrentProcess().MainModule.FileName;
                     string backupExe = currentExe + ".old";
 
-                    // الخدعة: تغيير اسم الملف الحالي وهو يعمل إلى .old
                     if (File.Exists(backupExe)) File.Delete(backupExe);
                     File.Move(currentExe, backupExe);
 
-                    // حفظ الملف الجديد المحمل بنفس الاسم الأصلي
                     File.WriteAllBytes(currentExe, fileBytes);
 
                     StatusText.Text = "UPDATE COMPLETE ✅ RESTARTING...";
-                    await Task.Delay(1000); // انتظار ثانية ليرى المستخدم الرسالة
+                    await Task.Delay(1000);
 
-                    // تشغيل النسخة الجديدة وإغلاق القديمة
                     Process.Start(currentExe);
                     Application.Current.Shutdown();
                 }
@@ -134,67 +127,51 @@ namespace SHNK_Booster
             }
         }
 
-        // 🧹 دالة تنظيف الملف القديم بعد التحديث
         private void CleanupOldUpdates()
         {
             try
             {
                 string backupExe = Process.GetCurrentProcess().MainModule.FileName + ".old";
-                if (File.Exists(backupExe))
-                {
-                    File.Delete(backupExe);
-                }
+                if (File.Exists(backupExe)) File.Delete(backupExe);
             }
             catch { }
         }
 
         // ==========================================
-        // 🔄 أزرار التبديل بين المحاكيات (جيم لوب / LDPlayer)
+        // 🔄 أزرار التبديل بين المحاكيات
         // ==========================================
         private void BtnGameLoop_Click(object sender, RoutedEventArgs e)
         {
-            targetProcessName = "AndroidEmulatorEx";
+            // 🔥 استهداف جميع محركات جيم لوب (الجديدة والقديمة)
+            targetProcesses = new string[] { "AndroidEmulatorEx", "AndroidEmulator", "aow_exe" };
             emulatorDisplayName = "GAMELOOP";
 
-            // تغيير الواجهة للون الأصلي (غامق) وإرجاع لون النص أزرق سماوي
             this.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E1E1E"));
             StatusText.Foreground = Brushes.Cyan;
-
             StatusText.Text = "GAMELOOP MODE SELECTED 🔵";
         }
 
         private void BtnLDPlayer_Click(object sender, RoutedEventArgs e)
         {
-            targetProcessName = "dnplayer";
+            // 🔥 استهداف المحرك الحقيقي للـ LDPlayer مع الخدمات والواجهة
+            targetProcesses = new string[] { "Ld9BoxHeadless", "Ld9BoxSVC", "dnplayer" };
             emulatorDisplayName = "LDPLAYER";
 
-            // تغيير الواجهة للون مختلف (مثلاً رمادي أفتح) ولون النص برتقالي لتمييز LDPlayer
             this.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#2C2C2C"));
             StatusText.Foreground = Brushes.Orange;
-
             StatusText.Text = "LDPLAYER MODE SELECTED 🟡";
         }
 
         // ==========================================
-        // 🛠️ دوال التحكم بالنافذة (Title Bar)
+        // 🛠️ دوال التحكم بالنافذة 
         // ==========================================
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed)
-            {
-                DragMove();
-            }
+            if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed) DragMove();
         }
 
-        private void MinimizeBtn_Click(object sender, RoutedEventArgs e)
-        {
-            WindowState = WindowState.Minimized;
-        }
-
-        private void CloseBtn_Click(object sender, RoutedEventArgs e)
-        {
-            Application.Current.Shutdown();
-        }
+        private void MinimizeBtn_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+        private void CloseBtn_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
 
         // ==========================================
         // 🛠️ استدعاءات النواة (WinAPI Low-Level)
@@ -202,15 +179,8 @@ namespace SHNK_Booster
         [StructLayout(LayoutKind.Sequential)]
         public struct MEMORYSTATUSEX
         {
-            public uint dwLength;
-            public uint dwMemoryLoad;
-            public ulong ullTotalPhys;
-            public ulong ullAvailPhys;
-            public ulong ullTotalPageFile;
-            public ulong ullAvailPageFile;
-            public ulong ullTotalVirtual;
-            public ulong ullAvailVirtual;
-            public ulong ullAvailExtendedVirtual;
+            public uint dwLength, dwMemoryLoad;
+            public ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile, ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -224,11 +194,7 @@ namespace SHNK_Booster
         static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
         [StructLayout(LayoutKind.Sequential)]
-        struct FILETIME
-        {
-            public uint dwLowDateTime;
-            public uint dwHighDateTime;
-        }
+        struct FILETIME { public uint dwLowDateTime, dwHighDateTime; }
 
         // ==========================================
         // 📊 قراءة ومراقبة الموارد
@@ -245,10 +211,7 @@ namespace SHNK_Booster
             if (GetSystemTimes(out FILETIME idleTime, out FILETIME kernelTime, out FILETIME userTime))
             {
                 ulong currentIdleTime = ((ulong)idleTime.dwHighDateTime << 32) | idleTime.dwLowDateTime;
-                ulong currentKernelTime = ((ulong)kernelTime.dwHighDateTime << 32) | kernelTime.dwLowDateTime;
-                ulong currentUserTime = ((ulong)userTime.dwHighDateTime << 32) | userTime.dwLowDateTime;
-
-                ulong currentSystemTime = currentKernelTime + currentUserTime;
+                ulong currentSystemTime = (((ulong)kernelTime.dwHighDateTime << 32) | kernelTime.dwLowDateTime) + (((ulong)userTime.dwHighDateTime << 32) | userTime.dwLowDateTime);
 
                 if (lastSystemTime > 0)
                 {
@@ -279,40 +242,22 @@ namespace SHNK_Booster
                 int deletedFilesCount = await Task.Run(() =>
                 {
                     int count = 0;
-                    string[] foldersToClean = {
-                        Path.GetTempPath(),
-                        @"C:\Windows\Temp",
-                        @"C:\Windows\Prefetch"
-                    };
-
+                    string[] foldersToClean = { Path.GetTempPath(), @"C:\Windows\Temp", @"C:\Windows\Prefetch" };
                     foreach (string folder in foldersToClean)
                     {
                         if (Directory.Exists(folder))
                         {
-                            try
-                            {
-                                string[] files = Directory.GetFiles(folder);
-                                foreach (string file in files)
-                                {
-                                    try
-                                    {
-                                        File.Delete(file);
-                                        count++;
-                                    }
-                                    catch { }
-                                }
-                            }
-                            catch { }
+                            try { foreach (string file in Directory.GetFiles(folder)) { try { File.Delete(file); count++; } catch { } } } catch { }
                         }
                     }
                     return count;
                 });
 
-                try { EmptyWorkingSet((IntPtr)(-1)); } catch { }
-
+                // التفريغ الذكي للبرامج الثقيلة فقط
+                TrimHeavyApps();
                 ApplyBoost(false);
 
-                MessageBox.Show($"تم تنظيف النظام وتفريغ الرام بنجاح! 🚀\nتم مسح {deletedFilesCount} ملف غير ضروري.", "SHNK BOOSTER", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"تم تنظيف النظام بنجاح! 🚀\nتم مسح {deletedFilesCount} ملف غير ضروري.", "SHNK BOOSTER", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -325,29 +270,16 @@ namespace SHNK_Booster
         {
             try
             {
-                // 1. التحقق من وجود المحاكي (الديناميكي) أولاً قبل إيقاف الخدمات
-                var processes = Process.GetProcessesByName(targetProcessName);
-                if (processes.Length == 0)
-                {
-                    StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
-                    return;
-                }
+                if (!CheckIfEmulatorRunning()) return;
 
                 StatusText.Text = "ACTIVATING TURBO... 🔥";
 
-                // 2. تصفير ذاكرة الإنترنت لتقليل البنج (Ping)
                 await Task.Run(() => ExecuteHiddenCommand("ipconfig /flushdns"));
-
-                // 3. إيقاف خدمات الويندوز الثقيلة بالخلفية
                 await Task.Run(() =>
                 {
-                    foreach (string service in heavyWindowsServices)
-                    {
-                        ExecuteHiddenCommand($"net stop \"{service}\" /y");
-                    }
+                    foreach (string service in heavyWindowsServices) ExecuteHiddenCommand($"net stop \"{service}\" /y");
                 });
 
-                // 4. تطبيق الأولوية وقص برامج الخلفية
                 ApplyBoost(true);
                 isTurboActive = true;
 
@@ -360,10 +292,7 @@ namespace SHNK_Booster
             }
         }
 
-        private void UltraBtn_Click(object sender, RoutedEventArgs e)
-        {
-            UltraMode();
-        }
+        private void UltraBtn_Click(object sender, RoutedEventArgs e) => UltraMode();
 
         private async void RestoreBtn_Click(object sender, RoutedEventArgs e)
         {
@@ -371,20 +300,15 @@ namespace SHNK_Booster
             {
                 StatusText.Text = "RESTORING SYSTEM... ♻️";
 
-                // 1. إعادة تشغيل خدمات الويندوز إذا كان وضع التيربو مفعلاً
                 if (isTurboActive)
                 {
                     await Task.Run(() =>
                     {
-                        foreach (string service in heavyWindowsServices)
-                        {
-                            ExecuteHiddenCommand($"net start \"{service}\" /y");
-                        }
+                        foreach (string service in heavyWindowsServices) ExecuteHiddenCommand($"net start \"{service}\" /y");
                     });
                     isTurboActive = false;
                 }
 
-                // 2. إرجاع أولويات المحاكي لوضعها الطبيعي
                 Restore();
 
                 MessageBox.Show("تمت استعادة النظام بنجاح! ✅\nعادت جميع خدمات الويندوز والشبكة للعمل بشكل طبيعي وآمن.", "SHNK RESTORE", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -396,21 +320,31 @@ namespace SHNK_Booster
             }
         }
 
+        // ==========================================
+        // 🧠 دوال المعالجة الأساسية
+        // ==========================================
+        bool CheckIfEmulatorRunning()
+        {
+            foreach (string procName in targetProcesses)
+            {
+                if (Process.GetProcessesByName(procName).Length > 0) return true;
+            }
+            StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
+            return false;
+        }
+
         void ApplyBoost(bool isTurbo)
         {
-            var processes = Process.GetProcessesByName(targetProcessName);
-
-            if (processes.Length == 0)
-            {
-                StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
-                return;
-            }
+            if (!CheckIfEmulatorRunning()) return;
 
             StatusText.Text = isTurbo ? "TURBO ACTIVATED 🔥" : "BOOST APPLIED ✅";
 
-            foreach (var p in processes)
+            foreach (string procName in targetProcesses)
             {
-                try { p.PriorityClass = ProcessPriorityClass.High; } catch { }
+                foreach (var p in Process.GetProcessesByName(procName))
+                {
+                    try { p.PriorityClass = ProcessPriorityClass.High; } catch { }
+                }
             }
 
             if (isTurbo) TrimHeavyApps();
@@ -418,24 +352,19 @@ namespace SHNK_Booster
 
         void UltraMode()
         {
-            var processes = Process.GetProcessesByName(targetProcessName);
-
-            if (processes.Length == 0)
-            {
-                StatusText.Text = $"OPEN {emulatorDisplayName} FIRST ⚠️";
-                return;
-            }
+            if (!CheckIfEmulatorRunning()) return;
 
             StatusText.Text = "ULTRA MODE 🚀 MAX PERFORMANCE";
 
-            foreach (var p in processes)
+            foreach (string procName in targetProcesses)
             {
-                try { p.PriorityClass = ProcessPriorityClass.RealTime; } catch { }
+                foreach (var p in Process.GetProcessesByName(procName))
+                {
+                    try { p.PriorityClass = ProcessPriorityClass.RealTime; } catch { }
+                }
             }
 
             TrimHeavyApps();
-
-            try { EmptyWorkingSet((IntPtr)(-1)); } catch { }
         }
 
         void TrimHeavyApps()
@@ -453,11 +382,12 @@ namespace SHNK_Booster
 
         void Restore()
         {
-            var processes = Process.GetProcessesByName(targetProcessName);
-
-            foreach (var p in processes)
+            foreach (string procName in targetProcesses)
             {
-                try { p.PriorityClass = ProcessPriorityClass.Normal; } catch { }
+                foreach (var p in Process.GetProcessesByName(procName))
+                {
+                    try { p.PriorityClass = ProcessPriorityClass.Normal; } catch { }
+                }
             }
 
             StatusText.Text = "SYSTEM RESTORED ✅";
